@@ -1,0 +1,55 @@
+#app {
+	width: 640px;
+	margin: 16px auto 16px auto;
+}
+
+label {
+	width: 100%;
+}
+
+.discord {
+	padding: 10px;
+	background-color: #403e3d;
+	color: #dcddde;
+	font-size: 14px;
+	font-family: Helvetica, Arial, sans-serif;
+}
+
+.username {
+	color: #6289da;
+	font-weight: normal;
+}
+
+.radiobox {
+	margin-top: 15px;
+}
+
+.card {
+	margin-top: 12px;
+	border-radius: 10px;
+}
+
+.header {
+	font-family: "Google Sans", Roboto, Arial, sans-serif;
+	font-size: 32px;
+	font-weight: 400;
+	line-height: 40px;
+	color: #202124;
+	line-height: 135%;
+	max-width: 100%;
+	min-width: 0%;
+}
+
+.tiny {
+	font-family: Roboto, Arial, sans-serif;
+	font-size: 14px;
+	font-weight: 400;
+	letter-spacing: 0.2px;
+	line-height: 20px;
+	color: #202124;
+	margin-top: 12px;
+}
+
+.submit {
+	margin-top: 12px;
+}

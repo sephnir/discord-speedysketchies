@@ -4,8 +4,10 @@
 		<meta charset="utf-8" />
 		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="description" content="description" />
+		<meta name="author" content="author" />
 		<title>Speedy Sketchies</title>
-		<link rel="icon" href="/favicon.ico" />
+		<link rel="icon" href="favicon.ico" />
 		<!-- fonts -->
 		<link
 			rel="stylesheet"
@@ -13,20 +15,33 @@
 		/>
 		<!-- spectre.css -->
 		<!-- also suggests consistent color theme -->
-		<link rel="stylesheet" href="/css/bootstrap.min.css" />
-		<link rel="stylesheet" href="/css/main.css" />
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/spectre.css/0.5.1/spectre.min.css"
+		/>
+		<style>
+			body {
+				font-family: "Open Sans", sans-serif;
+				background: rgb(250, 227, 225);
+				font-size: 16pt;
+				color: #202124;
+				padding-left: 1em;
+			}
+		</style>
 
 		<!-- preloading late-discovered js -->
 		<link rel="preload" href="/js/domhelpers.js" as="script" />
-		<link rel="preload" href="index.js" as="script" />
+		<link rel="preload" href="/js/main.js" as="script" />
 	</head>
 	<body>
-		<div id="app"></div>
+		<div id="app">
+			{{ token }}
+		</div>
 
 		<!-- vue.js -->
 		<script src="/js/vue.min.js"></script>
 		<script src="/js/vue-router.min.js"></script>
 		<script src="/js/domhelpers.js"></script>
-		<script src="index.js"></script>
+		<script src="/js/main.js"></script>
 	</body>
 </html>

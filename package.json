@@ -11,17 +11,19 @@
 		"node": ">=6.1.0"
 	},
 	"scripts": {
-		"start": "node-dev --no-deps --no-notify server/server.js",
+		"start": "node-dev --no-deps --no-notify index.js",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"lint": "eslint --fix **/*.js"
 	},
-	"author": "cktang88",
+	"author": "sephnir",
 	"license": "MIT",
 	"dependencies": {
 		"bluebird": "^3.5.0",
 		"body-parser": "^1.17.2",
 		"bunyan": "^1.8.10",
 		"cors": "^2.8.3",
+		"discord.js": "^12.0.1",
+		"esm": "^3.2.25",
 		"express": "^4.16.3",
 		"helmet": "^3.21.3",
 		"mongodb": "^3.5.4",

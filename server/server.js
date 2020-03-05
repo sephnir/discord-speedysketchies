@@ -4,8 +4,10 @@ const Promise = require("bluebird");
 // custom logger
 const log = require("./logger.js");
 const express = require("express");
+const discord = require("discord.js");
 
 const app = express();
+const client = new discord.Client();
 
 app.use(require("helmet")()); // use helmet
 app.use(require("cors")()); // enable CORS
@@ -23,6 +25,12 @@ server.listen(port, () => {
 	log.info(`Listening on port ${port}`);
 });
 
+client.once("ready", () => {
+	console.log("Ready!");
+});
+
+// client.login('your-token-goes-here');
+
 // 'body-parser' middleware for POST
 const bodyParser = require("body-parser");
 // create application/json parser
@@ -31,6 +39,8 @@ const jsonParser = bodyParser.json();
 const urlencodedParser = bodyParser.urlencoded({
 	extended: false
 });
+
+const path = require("path");
 
 // POST /login gets urlencoded bodies
 app.post("/login", urlencodedParser, (req, res) => {
@@ -44,34 +54,45 @@ app.post("/api/users", jsonParser, (req, res) => {
 	// create user in req.body
 });
 
+app.get("/prompt_form/*", (req, res) => {
+	return res.sendFile("prompt_form/index.html", {
+		root: `${__dirname}/../public`
+	});
+});
+
+app.get("*", (req, res) => {
+	return res.sendStatus(404);
+});
+
 // ex. using 'node-fetch' to call JSON REST API
 /*
-const fetch = require('node-fetch');
+const fetch = require("node-fetch");
 // for all options see https://github.com/bitinn/node-fetch#options
-const url = 'https://api.github.com/users/cktang88/repos';
+const url = "https://api.github.com/users/cktang88/repos";
 const options = {
-  method: 'GET',
-  headers: {
-    // spoof user-agent
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'
-  }
+	method: "GET",
+	headers: {
+		// spoof user-agent
+		"User-Agent":
+			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"
+	}
 };
 
 fetch(url, options)
-  .then(res => {
-    // meta
-    console.log(res.ok);
-    console.log(res.status);
-    console.log(res.statusText);
-    console.log(res.headers.raw());
-    console.log(res.headers.get('content-type'));
-    return res.json();
-  })
-  .then(json => {
-    console.log(`User has ${json.length} repos`);
-  })
-  .catch(err => {
-    // API call failed...
-    log.error(err);
-  });
+	.then(res => {
+		// meta
+		console.log(res.ok);
+		console.log(res.status);
+		console.log(res.statusText);
+		console.log(res.headers.raw());
+		console.log(res.headers.get("content-type"));
+		return res.json();
+	})
+	.then(json => {
+		console.log(`User has ${json.length} repos`);
+	})
+	.catch(err => {
+		// API call failed...
+		log.error(err);
+	});
 */
