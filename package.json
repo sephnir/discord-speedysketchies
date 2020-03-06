@@ -1,5 +1,5 @@
 {
-	"name": "speedysketches",
+	"name": "speedysketchies",
 	"version": "1.0.0",
 	"description": "Simple webapp and discord bot for a discord server",
 	"main": "server.js",
@@ -7,28 +7,28 @@
 		"type": "git",
 		"url": "git://github.com/username/repository.git"
 	},
-	"engines": {
-		"node": ">=6.1.0"
-	},
 	"scripts": {
-		"start": "node-dev --no-deps --no-notify index.js",
+		"start": "node index.js",
+		"watch": "node-dev --no-deps --no-notify index.js",
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"lint": "eslint --fix **/*.js"
 	},
 	"author": "sephnir",
 	"license": "MIT",
 	"dependencies": {
-		"bluebird": "^3.5.0",
-		"body-parser": "^1.17.2",
-		"bunyan": "^1.8.10",
+		"@babel/cli": "^7.8.4",
+		"@babel/core": "^7.8.7",
+		"@babel/preset-env": "^7.8.7",
+		"body-parser": "^1.19.0",
 		"cors": "^2.8.3",
 		"discord.js": "^12.0.1",
+		"dotenv": "^8.2.0",
 		"esm": "^3.2.25",
 		"express": "^4.16.3",
 		"helmet": "^3.21.3",
 		"mongodb": "^3.5.4",
-		"node-dev": "^3.1.3",
-		"node-fetch": "^2.1.1"
+		"mongoose": "^5.9.3",
+		"node-dev": "^3.1.3"
 	},
 	"devDependencies": {
 		"eslint": "^4.18.2",

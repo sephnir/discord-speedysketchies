@@ -29,148 +29,191 @@
 	</head>
 	<body>
 		<div id="app">
-			<div class="card">
-				<div class="card-body">
-					<div class="card-title header">Prompt Submission Form</div>
-					<div class="tiny">
-						You can submit a prompt even if you haven't done a
-						sketchy today. <br />
+			<div v-if="state==2">
+				<div class="card">
+					<div class="card-body">
+						<div class="card-title header">
+							Prompt Submission Form
+						</div>
+						<div class="tiny">
+							You can submit a prompt even if you haven't done a
+							sketchy today. <br />
+						</div>
+						<div class="text-danger tiny">* Required</div>
 					</div>
-					<div class="text-danger tiny">* Required</div>
+				</div>
+
+				<form action="/index.html" method="POST" @submit="validate">
+					<input type="hidden" v-model="token" />
+					<div class="card">
+						<div class="card-body">
+							<div>
+								What is your prompt?
+								<span class="text-danger">*</span>
+							</div>
+							<hr />
+							<input
+								ref="promptTextbox"
+								v-model="prompt"
+								type="text"
+								class="form-control"
+								:class="promptError"
+								placeholder="Type prompt here"
+								@keyup="promptUpdate"
+								@blur="promptUpdate"
+							/>
+						</div>
+					</div>
+					<div class="card">
+						<div class="card-body">
+							<div>
+								What is the drawing length of your prompt?
+								<span class="text-danger">*</span>
+							</div>
+							<hr />
+							<div class="custom-control custom-radio radiobox">
+								<input
+									v-model="duration"
+									class="custom-control-input"
+									type="radio"
+									id="radio_5"
+									name="duration"
+									value="5"
+								/>
+								<label
+									class="custom-control-label"
+									for="radio_5"
+									>5 minutes (Or personal designated
+									time)</label
+								>
+							</div>
+							<div class="custom-control custom-radio radiobox">
+								<input
+									v-model="duration"
+									class="custom-control-input"
+									type="radio"
+									id="radio_10"
+									name="duration"
+									value="10"
+								/>
+								<label
+									class="custom-control-label"
+									for="radio_10"
+									>10 minutes (Or personal designated time
+									doubled)</label
+								>
+							</div>
+							<div class="custom-control custom-radio radiobox">
+								<input
+									v-model="duration"
+									class="custom-control-input"
+									type="radio"
+									id="radio_15"
+									name="duration"
+									value="15"
+								/>
+								<label
+									class="custom-control-label"
+									for="radio_15"
+									>15 minutes (Or personal designated time
+									tripled)</label
+								>
+							</div>
+						</div>
+					</div>
+
+					<div class="card">
+						<div class="card-body">
+							<div>
+								Do you want your prompt to be anonymous?
+								<span class="text-danger">*</span>
+							</div>
+							<hr />
+							<div class="custom-control custom-radio radiobox">
+								<input
+									v-model="anon"
+									class="custom-control-input"
+									type="radio"
+									id="anon_true"
+									name="anon"
+									value="true"
+								/>
+								<label
+									class="custom-control-label"
+									for="anon_true"
+									>Yes</label
+								>
+							</div>
+							<div class="custom-control custom-radio radiobox">
+								<input
+									v-model="anon"
+									class="custom-control-input"
+									type="radio"
+									id="anon_false"
+									name="anon"
+									value="false"
+								/>
+								<label
+									class="custom-control-label"
+									for="anon_false"
+									>No</label
+								>
+							</div>
+						</div>
+					</div>
+					<div class="card">
+						<div class="card-body">
+							<div>
+								Preview:
+							</div>
+							<hr />
+							<div class="discord">
+								<span class="font-weight-bold">
+									Prompt # (Submitted by
+									<span v-if="anon === 'true' || anon == true"
+										>Anonymous</span
+									>
+									<span v-else class="username"
+										><i>@</i>{{name}}</span
+									>):
+								</span>
+								{{prompt}} [{{duration}}]
+							</div>
+						</div>
+					</div>
+
+					<input
+						type="submit"
+						class="btn btn-primary btn-lg submit"
+						value="Submit"
+					/>
+				</form>
+			</div>
+			<div v-else-if="state==0">
+				<div class="lds-ripple">
+					<div></div>
+					<div></div>
 				</div>
 			</div>
-
-			<div class="card">
-				<div class="card-body">
-					<div>
-						Preview:
-					</div>
-					<hr />
-					<div class="discord">
-						<span class="font-weight-bold">
-							Prompt 1 (Submitted by
-							<span v-if="anon === 'true' || anon == true"
-								>Anonymous</span
-							>
-							<span v-else class="username"><i>@</i>{{name}}</span
-							>):
-						</span>
-						{{prompt}} [{{duration}}]
+			<div v-else-if="state==1">
+				<div class="card invalid">
+					<div class="card-body text-center">
+						<h4 class="card-title">
+							Invalid/Expired link
+						</h4>
+						<hr />
+						Please request for a new link in Speedy Sketchies server
+						via Discord.
 					</div>
 				</div>
 			</div>
-
-			<form action="/index.html" method="POST">
-				<input type="hidden" v-model="token" />
-				<div class="card">
-					<div class="card-body">
-						<div>
-							What is your prompt?
-							<span class="text-danger">*</span>
-						</div>
-						<hr />
-						<input
-							v-model="prompt"
-							type="text"
-							class="form-control"
-							placeholder="Prompt"
-						/>
+			<div v-else>
+				<div class="card invalid">
+					<div class="card-body text-center">
+						{{error}}
 					</div>
 				</div>
-				<div class="card">
-					<div class="card-body">
-						<div>
-							What is the drawing length of your prompt?
-							<span class="text-danger">*</span>
-						</div>
-						<hr />
-						<div class="custom-control custom-radio radiobox">
-							<input
-								v-model="duration"
-								class="custom-control-input"
-								type="radio"
-								id="radio_5"
-								name="duration"
-								value="5"
-							/>
-							<label class="custom-control-label" for="radio_5"
-								>5 minutes (Or personal designated time)</label
-							>
-						</div>
-						<div class="custom-control custom-radio radiobox">
-							<input
-								v-model="duration"
-								class="custom-control-input"
-								type="radio"
-								id="radio_10"
-								name="duration"
-								value="10"
-							/>
-							<label class="custom-control-label" for="radio_10"
-								>10 minutes (Or personal designated time
-								doubled)</label
-							>
-						</div>
-						<div class="custom-control custom-radio radiobox">
-							<input
-								v-model="duration"
-								class="custom-control-input"
-								type="radio"
-								id="radio_15"
-								name="duration"
-								value="15"
-							/>
-							<label class="custom-control-label" for="radio_15"
-								>15 minutes (Or personal designated time
-								tripled)</label
-							>
-						</div>
-					</div>
-				</div>
-
-				<div class="card">
-					<div class="card-body">
-						<div>
-							Do you want your prompt to be anonymous? (If you
-							pick no, and your prompt gets picked, I'll put
-							something like "suggested by ----" next to your
-							prompt) <span class="text-danger">*</span>
-						</div>
-						<hr />
-						<div class="custom-control custom-radio radiobox">
-							<input
-								v-model="anon"
-								class="custom-control-input"
-								type="radio"
-								id="anon_true"
-								name="anon"
-								value="true"
-							/>
-							<label class="custom-control-label" for="anon_true"
-								>Yes</label
-							>
-						</div>
-						<div class="custom-control custom-radio radiobox">
-							<input
-								v-model="anon"
-								class="custom-control-input"
-								type="radio"
-								id="anon_false"
-								name="anon"
-								value="false"
-							/>
-							<label class="custom-control-label" for="anon_false"
-								>No</label
-							>
-						</div>
-					</div>
-				</div>
-				<input
-					type="submit"
-					class="btn btn-primary btn-lg submit"
-					value="Submit"
-				/>
-			</form>
+			</div>
 		</div>
 		<script src="/js/axios.min.js"></script>
 		<script src="/js/vue.min.js"></script>
