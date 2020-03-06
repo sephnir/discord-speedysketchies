@@ -10,6 +10,8 @@ import bodyParser from "body-parser";
 import helmet from "helmet";
 import http from "http";
 
+import routes from "./routes.json";
+
 // create application/json parser
 const jsonParser = bodyParser.json();
 // create application/x-www-form-urlencoded parser
@@ -39,8 +41,14 @@ class EpManager {
 	}
 
 	webRoutes = () => {
-		this.app.get("/prompt_form/*", (req, res) => {
-			return res.sendFile("prompt_form/index.html", {
+		this.app.get(`/${routes.web.promptForm}/*`, (req, res) => {
+			return res.sendFile(`${routes.web.promptForm}/index.html`, {
+				root: `${__dirname}/../public`
+			});
+		});
+
+		this.app.get(`/${routes.web.managePrompts}/*`, (req, res) => {
+			return res.sendFile(`${routes.web.managePrompts}/index.html`, {
 				root: `${__dirname}/../public`
 			});
 		});
@@ -51,13 +59,29 @@ class EpManager {
 	};
 
 	apiRoutes = () => {
-		this.app.post("/api/auth_token", jsonParser, (req, res) => {
-			this.authToken(req, res);
-		});
+		this.app.post(
+			`/api/${routes.api.authToken}`,
+			jsonParser,
+			(req, res) => {
+				this.authToken(req, res);
+			}
+		);
 
-		this.app.post("/api/prompt_submit", jsonParser, (req, res) => {
-			this.promptSubmit(req, res);
-		});
+		this.app.post(
+			`/api/${routes.api.submitPrompt}`,
+			jsonParser,
+			(req, res) => {
+				this.submitPrompt(req, res);
+			}
+		);
+
+		this.app.post(
+			`/api/${routes.api.fetchPrompts}`,
+			jsonParser,
+			(req, res) => {
+				this.fetchPrompts(req, res);
+			}
+		);
 	};
 
 	authToken(req, res) {
@@ -70,10 +94,62 @@ class EpManager {
 		});
 	}
 
-	promptSubmit(req, res) {
+	async fetchPrompts(req, res) {
 		if (!req.body) return res.sendStatus(400);
 
 		res.setHeader("Content-Type", "application/json");
+
+		let result;
+		try {
+			result = await Token.findOne({ token: req.body.token });
+		} catch (err) {
+			res.statusMessage = err;
+			res.sendStatus(500);
+			return;
+		}
+
+		if (!result || !result.admin) {
+			res.statusMessage = "Invalid token.";
+			res.sendStatus(401);
+			return;
+		}
+
+		Prompt.find({}, (err, inst) => {
+			if (err) res.send({ error: err });
+			res.send(inst);
+		});
+	}
+
+	async submitPrompt(req, res) {
+		if (!req.body) return res.sendStatus(400);
+
+		res.setHeader("Content-Type", "application/json");
+
+		let result;
+		try {
+			result = await Token.findOne({ token: req.body.token });
+		} catch (err) {
+			res.statusMessage = err;
+			res.sendStatus(500);
+			return;
+		}
+
+		if (!result) {
+			res.statusMessage = "Invalid token.";
+			res.sendStatus(401);
+			return;
+		}
+
+		let prompt = new Prompt({
+			userId: result.userId,
+			userName: result.userName,
+			prompt: req.body.prompt,
+			duration: req.body.duration,
+			anonymous: req.body.anon
+		});
+
+		await prompt.save();
+		res.send({ success: true });
 	}
 }
 

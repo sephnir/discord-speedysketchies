@@ -1,0 +1,11 @@
+{
+	"web": {
+		"promptForm": "prompt_form",
+		"managePrompts": "manage_prompts"
+	},
+	"api": {
+		"authToken": "auth_token",
+		"submitPrompt": "submit_prompt",
+		"fetchPrompts": "fetch_prompts"
+	}
+}

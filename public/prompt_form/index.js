@@ -19,7 +19,7 @@ var app = new Vue({
 	el: "#app",
 	data: {
 		state: 0,
-		error: "",
+		message: "",
 		name: "",
 		token: "",
 		prompt: "",
@@ -47,14 +47,40 @@ var app = new Vue({
 				})
 				.catch(err => {
 					this.state = -1;
-					this.error = err;
+					this.message = err;
 				});
 		},
 
 		validate: function(e) {
-			this.promptUpdate();
+			if (this.promptUpdate()) {
+				this.submitPrompt();
+			}
 
 			e.preventDefault();
+		},
+
+		submitPrompt: function() {
+			this.state = 0;
+			axios
+				.post("/api/submit_prompt", {
+					token: this.token,
+					prompt: this.prompt,
+					duration: this.duration,
+					anon: this.anon
+				})
+				.then(res => {
+					this.state = -1;
+					this.message =
+						"You have successfully submitted a prompt! Thank you for your participation!";
+				})
+				.catch(err => {
+					this.state = 3;
+					this.message = err;
+				});
+		},
+
+		back: function() {
+			this.state = 2;
 		},
 
 		promptUpdate: function(e) {

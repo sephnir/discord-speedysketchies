@@ -1,6 +1,7 @@
 import { config } from "dotenv";
 config();
 
+import routes from "./routes.json";
 import crypto from "crypto";
 import { Client } from "discord.js";
 
@@ -8,11 +9,9 @@ import mongoose from "mongoose";
 const Token = mongoose.model("Token");
 
 const prefix = process.env.PREFIX;
-const apitoken = process.env.API_TOKEN;
+const apitoken = process.env.BOT_APITOKEN;
+const adminRole = process.env.DISCORD_ADMIN_ROLEID;
 const host = process.env.HOST_URL;
-const routes = {
-	promptForm: "prompt_form"
-};
 
 const collection = "token";
 
@@ -34,6 +33,9 @@ class BotManager {
 	link = message => {
 		let tokenStr = crypto.randomBytes(6).toString("hex");
 		let user = message.author;
+		let admin = message.member
+			? message.member.roles.cache.has(adminRole)
+			: false;
 
 		Token.findOneAndUpdate(
 			{ userId: user.id },
@@ -41,7 +43,8 @@ class BotManager {
 				userId: user.id,
 				userName: user.tag,
 				token: tokenStr,
-				date: null
+				date: null,
+				admin: admin ? true : false
 			},
 			{ upsert: true },
 			function(err, doc) {
@@ -50,10 +53,18 @@ class BotManager {
 					return;
 				}
 
-				user.send(`${host}/${routes.promptForm}/${tokenStr}`);
-				user.send(
-					`Do not share this link around as this is your private link. To reissue a new link, use \`${prefix}link\`. Thank you for your participation!`
-				);
+				let template =
+					"Do not share these links around as these are your private links.\n" +
+					`In case someone managed to get your private link, you can reissue a new link using \`${prefix}link\`.\n` +
+					"For role priviledges, reissue your link from within the server.\n" +
+					"Thank you for your participation!\n\n";
+
+				let link1 = `Submit prompt: ${host}/${routes.web.promptForm}/${tokenStr}\n`;
+				let link2 = admin
+					? `Manage prompts: ${host}/${routes.web.managePrompts}/${tokenStr}\n`
+					: "";
+
+				user.send(template + link1 + link2);
 			}
 		);
 	};

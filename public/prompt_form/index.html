@@ -19,9 +19,9 @@
 		/>
 		<!-- spectre.css -->
 		<!-- also suggests consistent color theme -->
-		<link rel="stylesheet" href="/css/bootstrap.min.css" />
-		<link rel="stylesheet" href="/css/main.css" />
-		<link rel="stylesheet" href="index.css" />
+		<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" />
+		<link rel="stylesheet" type="text/css" href="/css/main.css" />
+		<link rel="stylesheet" type="text/css" href="index.css" />
 
 		<!-- preloading late-discovered js -->
 		<link rel="preload" href="/js/domhelpers.js" as="script" />
@@ -196,7 +196,7 @@
 				</div>
 			</div>
 			<div v-else-if="state==1">
-				<div class="card invalid">
+				<div class="card message">
 					<div class="card-body text-center">
 						<h4 class="card-title">
 							Invalid/Expired link
@@ -208,17 +208,24 @@
 				</div>
 			</div>
 			<div v-else>
-				<div class="card invalid">
+				<div class="card message">
 					<div class="card-body text-center">
-						{{error}}
+						{{message}}
+
+						<div v-if="state==3">
+							<hr />
+							<button @click="back" class="btn btn-primary">
+								Back
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>
 		</div>
-		<script src="/js/axios.min.js"></script>
-		<script src="/js/vue.min.js"></script>
-		<script src="/js/vue-router.min.js"></script>
-		<script src="/js/domhelpers.js"></script>
-		<script src="index.js"></script>
+		<script type="text/javascript" src="/js/axios.min.js"></script>
+		<script type="text/javascript" src="/js/vue.min.js"></script>
+		<script type="text/javascript" src="/js/vue-router.min.js"></script>
+		<script type="text/javascript" src="/js/domhelpers.js"></script>
+		<script type="text/javascript" src="index.js"></script>
 	</body>
 </html>

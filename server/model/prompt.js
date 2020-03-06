@@ -5,11 +5,13 @@ const Schema = mongoose.Schema;
 const Prompt = new Schema(
 	{
 		userId: { type: Number, index: true },
+		userName: { type: String, index: true },
 		prompt: { type: String },
 		duration: { type: Number, default: 5 },
-		anonymous: { type: Boolean, default: true }
+		anonymous: { type: Boolean, default: true },
+		posted: { type: Boolean, default: false }
 	},
-	{ timestamps: true }
+	{ timestamps: { updatedAt: false } }
 );
 
 mongoose.model("Prompt", Prompt);
