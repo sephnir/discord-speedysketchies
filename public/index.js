@@ -1,31 +1,30 @@
-"use strict";
-
-console.log("started script");
 window.onload = () => {
 	// DOM loaded
 };
 
-const getdata1 = function() {
-	return ["hello", "bye"];
-};
-
-const getdata2 = function() {
-	const arr = [];
-	for (let i = 0; i < 10; i += 1) {
-		arr.push(i);
-	}
-	return arr;
-};
+const router = new VueRouter({
+	routes: []
+});
 
 // vue.js
 window.app = new Vue({
+	router,
 	el: "#app",
 	data: {
-		collection: getdata1(),
-		otherstuff: getdata2()
+		token: ""
 	},
 	filter: {},
 	computed: {},
 	watch: {},
 	methods: {}
+});
+
+Vue.component("button-counter", {
+	data: function() {
+		return {
+			count: 0
+		};
+	},
+	template:
+		'<button v-on:click="count++">You clicked me {{ count }} times.</button>'
 });
