@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Speedy Sketchies</title>
+		<link rel="icon" href="/favicon.ico" />
+		<!-- fonts -->
+		<link
+			href="https://fonts.googleapis.com/css?family=Product+Sans&subset=latin,vietnamese,latin-ext,cyrillic,greek,cyrillic-ext,greek-ext"
+			rel="stylesheet"
+			type="text/css"
+		/>
+		<link
+			href="https://fonts.googleapis.com/css?family=Google+Sans:400,500|Roboto:300,400,400i,500,700&subset=latin,vietnamese,latin-ext,cyrillic,greek,cyrillic-ext,greek-ext"
+			rel="stylesheet"
+			type="text/css"
+		/>
+
+		<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" />
+		<link rel="stylesheet" type="text/css" href="/css/main.css" />
+		<link rel="stylesheet" type="text/css" href="/css/vuetify.min.css" />
+		<link rel="stylesheet" type="text/css" href="index.css" />
+
+		<link
+			href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css"
+			rel="stylesheet"
+		/>
+		<link
+			href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css"
+			rel="stylesheet"
+		/>
+
+		<!-- preloading late-discovered js -->
+		<link rel="preload" src="/js/moment.min.js" />
+		<link rel="preload" src="/js/axios.min.js" />
+		<link rel="preload" src="/js/vue.min.js" />
+		<link rel="preload" src="/js/vue-router.min.js" />
+		<link rel="preload" src="/js/vuetify.min.js" />
+		<link rel="preload" href="/js/domhelpers.js" as="script" />
+		<link rel="preload" href="index.js" as="script" />
+	</head>
+	<body>
+		<div id="app">
+			<div v-if="state==2">
+				<v-app id="vuetify">
+					<v-card>
+						<v-card-title>
+							<v-layout row wrap>
+								<v-flex xs4>
+									Prompts
+								</v-flex>
+								<v-flex xs3>
+									<v-select
+										class="mr-10"
+										:items="grouplist"
+										v-model="group"
+										label="Group by"
+										single-line
+										hide-details
+										clearable
+										@change="checkGrouping"
+									></v-select>
+								</v-flex>
+								<v-flex xs1>
+									<v-switch
+										v-model="groupdesc"
+										:label="`Desc`"
+										@change="checkGrouping"
+									></v-switch>
+								</v-flex>
+								<v-flex xs4>
+									<v-text-field
+										v-model="search"
+										append-icon="mdi-magnify"
+										label="Search"
+										single-line
+										hide-details
+									></v-text-field>
+								</v-flex>
+							</v-layout>
+						</v-card-title>
+						<v-data-table
+							v-model="selected"
+							:headers="headers"
+							:items="prompts"
+							:single-select="false"
+							:items-per-page="10"
+							:search="search"
+							:group-by.sync="group"
+							:group-desc.sync="grouping"
+							item-key="_id"
+							show-select
+							multi-sort
+						>
+							<template v-slot:item.posted="{ item }">
+								<div v-if="item.posted">
+									<v-btn
+										@click="statusChange(item._id, item.posted)"
+										color="green"
+										icon
+										small
+									>
+										<v-icon>mdi-check-circle</v-icon>
+									</v-btn>
+								</div>
+								<div v-else>
+									<v-btn
+										@click="statusChange(item._id, item.posted)"
+										color="primary"
+										icon
+										small
+									>
+										<v-icon>mdi-alert-decagram</v-icon>
+									</v-btn>
+								</div>
+							</template>
+							<template v-slot:item.anonymous="{ item }">
+								<div v-if="item.anonymous">
+									<v-icon color="red"
+										>mdi-guy-fawkes-mask</v-icon
+									>
+								</div>
+								<div v-else>
+									<v-icon color="green"
+										>mdi-emoticon-outline</v-icon
+									>
+								</div>
+							</template>
+						</v-data-table>
+					</v-card>
+
+					<v-card class="mt-1 p-3 text-right">
+						Select 5 prompts to post.
+						<div v-if="selected.length == 5">
+							<v-btn color="primary" @click="postPrompts"
+								>Post</v-btn
+							>
+						</div>
+						<div v-else>
+							<v-btn color="primary" disabled>Post</v-btn>
+						</div>
+					</v-card>
+				</v-app>
+			</div>
+			<div v-else-if="state==0">
+				<div class="lds-ripple">
+					<div></div>
+					<div></div>
+				</div>
+			</div>
+			<div v-else-if="state==1">
+				<div class="card message">
+					<div class="card-body text-center">
+						<h4 class="card-title">
+							Invalid/Expired link
+						</h4>
+						<hr />
+						Please request for a new link in Speedy Sketchies server
+						via Discord.
+					</div>
+				</div>
+			</div>
+			<div v-else>
+				<div class="card message">
+					<div class="card-body text-center">
+						{{message}}
+
+						<div v-if="state==3">
+							<hr />
+							<button @click="back" class="btn btn-primary">
+								Back
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script type="text/javascript" src="/js/moment.min.js"></script>
+		<script type="text/javascript" src="/js/axios.min.js"></script>
+		<script type="text/javascript" src="/js/vue.min.js"></script>
+		<script type="text/javascript" src="/js/vue-router.min.js"></script>
+		<script type="text/javascript" src="/js/vuetify.min.js"></script>
+		<script type="text/javascript" src="/js/domhelpers.js"></script>
+		<script type="text/javascript" src="index.js"></script>
+	</body>
+</html>

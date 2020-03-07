@@ -6,6 +6,8 @@
 	"api": {
 		"authToken": "auth_token",
 		"submitPrompt": "submit_prompt",
-		"fetchPrompts": "fetch_prompts"
+		"fetchPrompts": "fetch_prompts",
+		"postPrompts": "post_prompts",
+		"updatePromptsStatus": "update_prompts_status"
 	}
 }

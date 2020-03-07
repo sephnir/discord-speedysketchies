@@ -1,6 +1,7 @@
 import { config } from "dotenv";
 config();
 
+import moment from "moment";
 import routes from "./routes.json";
 import crypto from "crypto";
 import { Client } from "discord.js";
@@ -12,6 +13,15 @@ const prefix = process.env.PREFIX;
 const apitoken = process.env.BOT_APITOKEN;
 const adminRole = process.env.DISCORD_ADMIN_ROLEID;
 const host = process.env.HOST_URL;
+
+const archiveChId = process.env.CH_ARCHIVE;
+const promptChId = [
+	process.env.CH_PROMPT1,
+	process.env.CH_PROMPT2,
+	process.env.CH_PROMPT3,
+	process.env.CH_PROMPT4,
+	process.env.CH_PROMPT5
+];
 
 const collection = "token";
 
@@ -26,7 +36,7 @@ class BotManager {
 			console.log(`Logged in as ${this.client.user.tag}!`);
 			this.botId = this.client.user.id;
 		});
-		this.client.on("message", this.message);
+		this.client.on("message", this.receive);
 		this.client.login(apitoken);
 	}
 
@@ -69,7 +79,7 @@ class BotManager {
 		);
 	};
 
-	message = message => {
+	receive = message => {
 		if (message.content.charAt(0) != prefix) {
 			return;
 		}
@@ -83,6 +93,27 @@ class BotManager {
 		if (msgArr[0] === "link") {
 			this.link(message);
 		}
+	};
+
+	sendPrompts = async prompts => {
+		let dateMsg = `**>\n>\n>\n${moment().format("MMM Do, YYYY")}**\n\n`;
+		let promptsMsg = "";
+
+		let count = 1;
+		prompts.forEach(prompt => {
+			promptsMsg += `**Prompt ${count} (Submitted by <@${
+				prompt.anonymous ? "Anonymous" : prompt.userId
+			}>):** ${prompt.prompt} [${prompt.duration}] \n`;
+			count++;
+		});
+
+		let archCh = await this.client.channels.fetch(archiveChId);
+		archCh.send(`${dateMsg}${promptsMsg}`);
+
+		promptChId.forEach(async chId => {
+			let pmtCh = await this.client.channels.fetch(chId);
+			pmtCh.send(dateMsg);
+		});
 	};
 }
 

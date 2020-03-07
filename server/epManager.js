@@ -22,7 +22,8 @@ const urlencodedParser = bodyParser.urlencoded({
 const port = process.env.PORT || 8000;
 
 class EpManager {
-	constructor() {
+	constructor(botManager) {
+		this.botManager = botManager;
 		this.app = express();
 		this.server = http.Server(this.app);
 
@@ -80,6 +81,22 @@ class EpManager {
 			jsonParser,
 			(req, res) => {
 				this.fetchPrompts(req, res);
+			}
+		);
+
+		this.app.post(
+			`/api/${routes.api.postPrompts}`,
+			jsonParser,
+			(req, res) => {
+				this.postPrompts(req, res);
+			}
+		);
+
+		this.app.post(
+			`/api/${routes.api.updatePromptsStatus}`,
+			jsonParser,
+			(req, res) => {
+				this.updatePromptsStatus(req, res);
 			}
 		);
 	};
@@ -150,6 +167,87 @@ class EpManager {
 
 		await prompt.save();
 		res.send({ success: true });
+	}
+
+	async updatePromptsStatus(req, res) {
+		if (!req.body) return res.sendStatus(400);
+		if (
+			!req.body.prompts ||
+			req.body.prompts.length == 0 ||
+			!req.body.statuses ||
+			req.body.prompts.length != req.body.statuses.length
+		)
+			return res.sendStatus(400);
+
+		res.setHeader("Content-Type", "application/json");
+
+		let result;
+		try {
+			result = await Token.findOne({ token: req.body.token });
+		} catch (err) {
+			res.statusMessage = err;
+			res.sendStatus(500);
+			return;
+		}
+
+		if (!result || !result.admin) {
+			res.statusMessage = "Invalid token.";
+			res.sendStatus(401);
+			return;
+		}
+		let idArr = req.body.prompts;
+		let val = req.body.statuses;
+		await this._updatePromptsStatus(idArr, val);
+
+		res.sendStatus(200);
+	}
+
+	async _updatePromptsStatus(idArr, val) {
+		for (let i = 0; i < idArr.length; i++) {
+			await Prompt.findOneAndUpdate(
+				{ _id: idArr[i] },
+				{ posted: val[i] }
+			);
+		}
+	}
+
+	async postPrompts(req, res) {
+		if (!req.body) return res.sendStatus(400);
+		if (!req.body.prompts || req.body.prompts.length != 5)
+			return res.sendStatus(400);
+
+		res.setHeader("Content-Type", "application/json");
+
+		let result;
+		try {
+			result = await Token.findOne({ token: req.body.token });
+		} catch (err) {
+			res.statusMessage = err;
+			res.sendStatus(500);
+			return;
+		}
+
+		if (!result || !result.admin) {
+			res.statusMessage = "Invalid token.";
+			res.sendStatus(401);
+			return;
+		}
+		let query = [];
+		let trues = [];
+
+		for (let i = 0; i < req.body.prompts.length; i++) {
+			query.push(mongoose.Types.ObjectId(req.body.prompts[i]));
+			trues.push(true);
+		}
+
+		this._updatePromptsStatus(query, trues);
+
+		Prompt.find({ _id: { $in: query } }, (err, inst) => {
+			if (err) res.send({ error: err });
+			this.botManager.sendPrompts(inst);
+
+			return res.sendStatus(200);
+		});
 	}
 }
 
