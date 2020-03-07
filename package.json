@@ -1,6 +1,9 @@
 {
 	"name": "speedysketchies",
 	"version": "1.0.0",
+	"engines": {
+		"node": "13.7.0"
+	},
 	"description": "Simple webapp and discord bot for a discord server",
 	"main": "server.js",
 	"repository": {
