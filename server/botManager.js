@@ -80,7 +80,7 @@ class BotManager {
 	};
 
 	receive = message => {
-		if (message.content.charAt(0) != prefix) {
+		if (message.content.substring(0, prefix.length) != prefix) {
 			return;
 		}
 
@@ -90,7 +90,7 @@ class BotManager {
 
 		let msgArr = message.content.replace(prefix, "");
 		msgArr = msgArr.split(" ");
-		if (msgArr[0] === "link") {
+		if (msgArr[0] === "SSlink") {
 			this.link(message);
 		}
 	};
@@ -101,9 +101,9 @@ class BotManager {
 
 		let count = 1;
 		prompts.forEach(prompt => {
-			promptsMsg += `**Prompt ${count} (Submitted by <@${
-				prompt.anonymous ? "Anonymous" : prompt.userId
-			}>):** ${prompt.prompt} [${prompt.duration}] \n`;
+			promptsMsg += `**Prompt ${count} (Submitted by ${
+				prompt.anonymous ? "Anonymous" : "<@" + prompt.userId + ">"
+			}):** ${prompt.prompt} [${prompt.duration}] \n`;
 			count++;
 		});
 
