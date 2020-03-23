@@ -90,7 +90,7 @@ class BotManager {
 
 		let msgArr = message.content.replace(prefix, "");
 		msgArr = msgArr.split(" ");
-		if (msgArr[0] === "SSlink") {
+		if (msgArr[0] === "link") {
 			this.link(message);
 		}
 	};
