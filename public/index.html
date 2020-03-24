@@ -16,14 +16,19 @@
 		<link rel="stylesheet" href="/css/bootstrap.min.css" />
 		<link rel="stylesheet" href="/css/main.css" />
 
-		<!-- preloading late-discovered js -->
+        <!-- preloading late-discovered js -->
+        <link rel="preload" src="/js/moment.min.js" />
+        <link rel="preload" src="/js/moment-timezone-with-data.min.js"></script>
 		<link rel="preload" href="/js/domhelpers.js" as="script" />
 		<link rel="preload" href="index.js" as="script" />
 	</head>
 	<body>
-		<div id="app"></div>
+		<div id="app">
+        </div>
 
-		<!-- vue.js -->
+        <!-- vue.js -->
+        <script type="text/javascript" src="/js/moment.min.js"></script>
+        <script type="text/javascript" src="/js/moment-timezone-with-data.min.js"></script>
 		<script src="/js/vue.min.js"></script>
 		<script src="/js/vue-router.min.js"></script>
 		<script src="/js/domhelpers.js"></script>
