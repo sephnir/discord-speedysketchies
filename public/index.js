@@ -6,25 +6,32 @@ const router = new VueRouter({
 	routes: []
 });
 
+Vue.component("date-display", {
+	data: {},
+
+	mounted: function() {
+		setInterval(() => {
+			this.updateTime();
+		}, 1000);
+	},
+	methods: {
+		updateTime() {
+			this.date = moment();
+			this.date = this.date.tz("Etc/GMT+5").format();
+		}
+	},
+	template: `<div>{{date}}</div>`
+});
+
 // vue.js
 window.app = new Vue({
 	router,
 	el: "#app",
 	data: {
-		token: ""
+		date: ""
 	},
 	filter: {},
 	computed: {},
 	watch: {},
 	methods: {}
-});
-
-Vue.component("button-counter", {
-	data: function() {
-		return {
-			count: 0
-		};
-	},
-	template:
-		'<button v-on:click="count++">You clicked me {{ count }} times.</button>'
 });
