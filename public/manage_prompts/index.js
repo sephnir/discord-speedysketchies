@@ -112,7 +112,7 @@ var app = new Vue({
 						this.prompts = res.data;
 						this.prompts.forEach(prompt => {
 							prompt.date = moment(prompt.createdAt).format(
-								"DD/MM/YYYY"
+								"DD/MM/YYYY HH:mm"
 							);
 						});
 						this.state = 2;

@@ -2,6 +2,7 @@ import { config } from "dotenv";
 config();
 
 import moment from "moment";
+import tz from "moment-timezone";
 import routes from "./routes.json";
 import crypto from "crypto";
 import { Client } from "discord.js";
@@ -15,6 +16,7 @@ const adminRole = process.env.DISCORD_ADMIN_ROLEID;
 const host = process.env.HOST_URL;
 
 const archiveChId = process.env.CH_ARCHIVE;
+const timezone = process.env.TIMEZONE;
 const promptChId = [
 	process.env.CH_PROMPT1,
 	process.env.CH_PROMPT2,
@@ -96,7 +98,11 @@ class BotManager {
 	};
 
 	sendPrompts = async prompts => {
-		let dateMsg = `**>\n>\n>\n${moment().format("MMM Do, YYYY")}**\n\n`;
+		let dateCur = moment()
+			.tz(timezone)
+			.format("MMM Do, YYYY");
+
+		let dateMsg = `**>\n>\n>\n${dateCur}**\n\n`;
 		let promptsMsg = "";
 
 		let count = 1;
