@@ -37,8 +37,6 @@ class BotManager {
 	constructor() {
 		this.client = new Client();
 
-		this.fetchMsg();
-
 		this.client.once("ready", () => {
 			console.log(`Logged in as ${this.client.user.tag}!`);
 			this.botId = this.client.user.id;
@@ -47,17 +45,38 @@ class BotManager {
 		this.client.login(apitoken);
 	}
 
-	fetchMsg = () => {
-		axios
-			.get(botMsgUrl)
-			.then(response => {
-				this.msgTemplates = xml.parse(response.data);
-			})
-			.catch(error => {
-				if (error.response) {
-					console.log(error.response.data);
-				}
-			});
+	receive = message => {
+		if (message.content.substring(0, prefix.length) != prefix) {
+			return;
+		}
+
+		if (message.author.id == this.botId) {
+			return;
+		}
+
+		let msgArr = message.content.replace(prefix, "");
+		msgArr = msgArr.split(" ");
+		if (msgArr[0] === "link") {
+			this.fetchTemplate(message, this.link);
+		}
+	};
+
+	fetchTemplate = async (message, callback) => {
+		if (botMsgUrl) {
+			axios
+				.get(botMsgUrl)
+				.then(response => {
+					this.msgTemplates = xml.parse(response.data);
+					callback(message);
+				})
+				.catch(error => {
+					if (error.response) {
+						console.log(error.response.data);
+					}
+				});
+		} else {
+			callback(message);
+		}
 	};
 
 	link = message => {
@@ -99,22 +118,6 @@ class BotManager {
 				user.send(template + nextLn + link1 + link2);
 			}
 		);
-	};
-
-	receive = message => {
-		if (message.content.substring(0, prefix.length) != prefix) {
-			return;
-		}
-
-		if (message.author.id == this.botId) {
-			return;
-		}
-
-		let msgArr = message.content.replace(prefix, "");
-		msgArr = msgArr.split(" ");
-		if (msgArr[0] === "link") {
-			this.link(message);
-		}
 	};
 
 	sendPromptsMsg = async promptsMsg => {
