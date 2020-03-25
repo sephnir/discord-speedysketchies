@@ -88,7 +88,7 @@ class EpManager {
 			`/api/${routes.api.postPrompts}`,
 			jsonParser,
 			(req, res) => {
-				this.postPrompts(req, res);
+				this.postPromptsMsg(req, res);
 			}
 		);
 
@@ -209,6 +209,41 @@ class EpManager {
 				{ posted: val[i] }
 			);
 		}
+	}
+
+	async postPromptsMsg(req, res) {
+		if (!req.body) return res.sendStatus(400);
+		if (!req.body.prompts || req.body.prompts.length != 5)
+			return res.sendStatus(400);
+		if (!req.body.message) return res.sendStatus(400);
+
+		res.setHeader("Content-Type", "text/plain");
+		let result;
+		try {
+			result = await Token.findOne({ token: req.body.token });
+		} catch (err) {
+			res.statusMessage = err;
+			res.sendStatus(500);
+			return;
+		}
+
+		if (!result || !result.admin) {
+			res.statusMessage = "Invalid token.";
+			res.sendStatus(401);
+			return;
+		}
+		this.botManager.sendPromptsMsg(req.body.message);
+
+		let query = [];
+		let trues = [];
+
+		for (let i = 0; i < req.body.prompts.length; i++) {
+			query.push(mongoose.Types.ObjectId(req.body.prompts[i]));
+			trues.push(true);
+		}
+
+		await this._updatePromptsStatus(query, trues);
+		return res.sendStatus(200);
 	}
 
 	async postPrompts(req, res) {

@@ -14,6 +14,8 @@ var app = new Vue({
 	el: "#app",
 	data: {
 		state: 0,
+		postDialog: false,
+		postMessage: "",
 		token: "",
 		pagination: {
 			sortBy: "name"
@@ -28,7 +30,7 @@ var app = new Vue({
 			{ value: "duration", text: "Duration (Mins)" },
 			{ value: "anonymous", text: "Anonymous" },
 			{ value: "userName", text: "Author" },
-			{ value: "date", text: "Date (DD/MM/YYYY)" }
+			{ value: "date", text: "Date Posted (DD/MM/YYYY)" }
 		],
 		headers: [
 			{
@@ -53,7 +55,8 @@ var app = new Vue({
 				filterable: false,
 				sort: function(a, b) {
 					if (a > b) return 1;
-					return -(a < b);
+					if (a < b) return -1;
+					return 0;
 				}
 			},
 			{
@@ -71,19 +74,28 @@ var app = new Vue({
 				align: "center"
 			},
 			{
+				value: "userId",
+				text: "Author ID",
+				divider: true,
+				width: "10%",
+				align: "center"
+			},
+			{
 				value: "date",
-				text: "Date (DD/MM/YYYY)",
+				text: "Date Posted (DD/MM/YYYY)",
 				divider: true,
 				width: "8%",
 				align: "center",
 				sort: function(a, b) {
 					if (
-						moment(a, "DD/MM/YYYY").isAfter(moment(b, "DD/MM/YYYY"))
+						moment(a, "DD/MM/YYYY HH:mm").isAfter(
+							moment(b, "DD/MM/YYYY HH:mm")
+						)
 					)
 						return 1;
 					if (
-						moment(a, "DD/MM/YYYY").isBefore(
-							moment(b, "DD/MM/YYYY")
+						moment(a, "DD/MM/YYYY HH:mm").isBefore(
+							moment(b, "DD/MM/YYYY HH:mm")
 						)
 					)
 						return -1;
@@ -135,6 +147,24 @@ var app = new Vue({
 			this.updatePromptsStatus([id], [val]);
 		},
 
+		updatePromptMessage() {
+			if (this.selected.length == 5) {
+				let strBuilder = "";
+
+				for (let i = 0; i < 5; i++) {
+					strBuilder += `**Prompt ${i + 1} (Submitted by ${
+						this.selected[i].anonymous
+							? "Anonymous"
+							: "<@" + this.selected[i].userId + ">"
+					}):** ${this.selected[i].prompt} [${
+						this.selected[i].duration
+					}] \n`;
+				}
+
+				this.postMessage = strBuilder;
+			}
+		},
+
 		updatePromptsStatus(idArr, statusArr) {
 			axios
 				.post("/api/update_prompts_status", {
@@ -166,7 +196,8 @@ var app = new Vue({
 			axios
 				.post("/api/post_prompts", {
 					token: this.token,
-					prompts: idArr
+					prompts: idArr,
+					message: this.postMessage
 				})
 				.then(res => {
 					this.fetchPrompts();

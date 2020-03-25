@@ -132,17 +132,39 @@
 						</v-data-table>
 					</v-card>
 
-					<v-card class="mt-1 p-3 text-right">
-						Select 5 prompts to post.
-						<div v-if="selected.length == 5">
-							<v-btn color="primary" @click="postPrompts"
-								>Post</v-btn
-							>
-						</div>
-						<div v-else>
-							<v-btn color="primary" disabled>Post</v-btn>
-						</div>
-					</v-card>
+                    <v-card class="mt-1 p-3 text-right">
+            
+                        Select 5 prompts to post.
+                        <div v-if="selected.length == 5">
+                            <!-- <v-btn color="primary" @click="postPrompts"
+                                >Post</v-btn
+                            > -->
+
+                            <v-dialog v-model="postDialog" persistent max-width="800">
+                                <template v-slot:activator="{ on }">
+                                    <v-btn color="primary" dark v-on="on" @click="updatePromptMessage()">Post</v-btn>
+                                </template>
+                                <v-card>
+                                        <v-card-title class="headline">Prompts Touchup</v-card-title>
+                                        <v-card-text></v-card-text>
+                                        <v-textarea class="m-4" 
+                                            v-model="postMessage"
+                                            >
+                                        </v-textarea>
+                                        <v-card-actions>
+                                        <v-spacer></v-spacer>
+                                        <v-btn color="red" dark @click="postDialog = false">Cancel</v-btn>
+                                        <v-btn color="primary" dark @click="postDialog = false; postPrompts();">Post</v-btn>
+                                        </v-card-actions>
+                                </v-card>
+                            </v-dialog>
+
+                        </div>
+                        <div v-else>
+                            <v-btn color="primary" disabled>Post</v-btn>
+                            
+                        </div>
+                    </v-card>
 				</v-app>
 			</div>
 			<div v-else-if="state==0">
