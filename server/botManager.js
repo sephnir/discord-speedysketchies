@@ -14,11 +14,18 @@ const Token = mongoose.model("Token");
 
 const prefix = process.env.PREFIX;
 const apitoken = process.env.BOT_APITOKEN;
-const adminRole = process.env.DISCORD_ADMIN_ROLEID;
+
+const adminRoleId = process.env.DISCORD_ADMIN_ROLEID;
+const memberRoleId = process.env.DISCORD_MEMBER_ROLEID;
+
+const notifyRoleCommands = process.env.DISCORD_NOTIFY_ROLECMDS;
+const notifyRoleIds = process.env.DISCORD_NOTIFY_ROLEIDS;
+
 const host = process.env.HOST_URL;
 const botMsgUrl = process.env.BOT_MESSAGE_URL;
 const archiveChId = process.env.CH_ARCHIVE;
 const timezone = process.env.TIMEZONE;
+
 const promptChId = [
 	process.env.CH_PROMPT1,
 	process.env.CH_PROMPT2,
@@ -57,33 +64,40 @@ class BotManager {
 		let msgArr = message.content.replace(prefix, "");
 		msgArr = msgArr.split(" ");
 		if (msgArr[0] === "link") {
-			this.fetchTemplate(message, this.link);
+			this.fetchTemplate(message, msgArr, this.link);
+			return;
+		}
+		if (msgArr[0] === "notification") {
+			this.fetchTemplate(message, msgArr, this.notification);
+			return;
 		}
 	};
 
-	fetchTemplate = async (message, callback) => {
+	fetchTemplate = async (message, args, callback) => {
 		if (botMsgUrl) {
 			axios
 				.get(botMsgUrl)
 				.then(response => {
 					this.msgTemplates = xml.parse(response.data);
-					callback(message);
+					callback(message, args);
 				})
 				.catch(error => {
 					if (error.response) {
 						console.log(error.response.data);
+					} else {
+						console.log(error);
 					}
 				});
 		} else {
-			callback(message);
+			callback(message, args);
 		}
 	};
 
-	link = message => {
+	link = (message, args) => {
 		let tokenStr = crypto.randomBytes(6).toString("hex");
 		let user = message.author;
 		let admin = message.member
-			? message.member.roles.cache.has(adminRole)
+			? message.member.roles.cache.has(adminRoleId)
 			: false;
 
 		Token.findOneAndUpdate(
@@ -118,6 +132,58 @@ class BotManager {
 				user.send(template + nextLn + link1 + link2);
 			}
 		);
+	};
+
+	notification = async (message, args) => {
+		let notifyCommandArr = notifyRoleCommands.split(",");
+		let notifyIDArr = notifyRoleIds.split(",");
+		let channel = message.channel;
+		let member = message.member;
+		let roles = member.roles.cache.array();
+
+		if (!channel) return;
+
+		if (!member.roles.cache.has(memberRoleId)) {
+			//roles.push(memberRoleId);
+			await member.roles.add(memberRoleId);
+		}
+
+		let check = false;
+		for (let i = 0; i < notifyCommandArr.length; i++) {
+			if (args[1] === notifyCommandArr[i]) {
+				let promiseList = [];
+				for (let j = 0; j < notifyIDArr.length; j++) {
+					if (member.roles.cache.has(notifyIDArr[j]))
+						promiseList.push(member.roles.remove(notifyIDArr[j]));
+				}
+
+				await Promise.all(promiseList);
+
+				member.roles.add(notifyIDArr[i]);
+				check = true;
+				break;
+			}
+		}
+
+		if (check) {
+			let template =
+				this.msgTemplates.notification &&
+				this.msgTemplates.notification.success
+					? this.msgTemplates.notification.success
+					: "Role has been successfully set!";
+			channel.send(template);
+		} else {
+			let template =
+				this.msgTemplates.notification &&
+				this.msgTemplates.notification.wrong_command
+					? this.msgTemplates.notification.wrong_command
+					: "You need to specify a valid role for 'notification'.";
+			let commandList = `\nUsage: \`${prefix}notification ${notifyCommandArr.join(
+				"|"
+			)}\``;
+
+			channel.send(`${template}${commandList}`);
+		}
 	};
 
 	sendPromptsMsg = async promptsMsg => {
