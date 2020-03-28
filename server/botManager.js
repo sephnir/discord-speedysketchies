@@ -24,6 +24,7 @@ const notifyRoleIds = process.env.DISCORD_NOTIFY_ROLEIDS;
 const host = process.env.HOST_URL;
 const botMsgUrl = process.env.BOT_MESSAGE_URL;
 const archiveChId = process.env.CH_ARCHIVE;
+const errorCh = process.env.CH_ERROR;
 const timezone = process.env.TIMEZONE;
 
 const promptChId = [
@@ -81,11 +82,12 @@ class BotManager {
 					this.msgTemplates = xml.parse(response.data);
 					callback(message, args);
 				})
-				.catch(error => {
+				.catch(async error => {
+					let errCh = await this.client.channels.fetch(errorCh);
 					if (error.response) {
-						console.log(error.response.data);
+						errCh.send(error.response.data);
 					} else {
-						console.log(error);
+						errCh.send(error);
 					}
 				});
 		} else {
@@ -139,9 +141,8 @@ class BotManager {
 		let notifyIDArr = notifyRoleIds.split(",");
 		let channel = message.channel;
 		let member = message.member;
-		let roles = member.roles.cache.array();
 
-		if (!channel) return;
+		if (!member) return;
 
 		if (!member.roles.cache.has(memberRoleId)) {
 			//roles.push(memberRoleId);
