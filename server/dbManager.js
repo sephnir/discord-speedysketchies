@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 
 import "./model/token";
 import "./model/prompt";
+import "./model/sftheme";
 
 const url = process.env.MONGO_URL;
 
@@ -13,12 +14,12 @@ class DbManager {
 		mongoose.connect(url, {
 			useUnifiedTopology: true,
 			useNewUrlParser: true,
-			useFindAndModify: false
+			useFindAndModify: false,
 		});
 		this.db = mongoose.connection;
 
 		this.db.on("error", console.error.bind(console, "connection error:"));
-		this.db.once("open", function() {
+		this.db.once("open", function () {
 			console.log("Connected to mongodb!");
 		});
 	}

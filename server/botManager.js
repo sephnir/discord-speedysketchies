@@ -5,12 +5,14 @@ import moment from "moment";
 import "moment-timezone";
 import routes from "./routes.json";
 import crypto from "crypto";
-import { Client } from "discord.js";
+import { Client, MessageAttachment } from "discord.js";
 import axios from "axios";
 import xml from "fast-xml-parser";
+import sfFactory from "./sketchfecta/sfFactory";
 
 import mongoose from "mongoose";
 const Token = mongoose.model("Token");
+const SFTheme = mongoose.model("SFTheme");
 
 const prefix = process.env.PREFIX;
 const apitoken = process.env.BOT_APITOKEN;
@@ -32,7 +34,7 @@ const promptChId = [
 	process.env.CH_PROMPT2,
 	process.env.CH_PROMPT3,
 	process.env.CH_PROMPT4,
-	process.env.CH_PROMPT5
+	process.env.CH_PROMPT5,
 ];
 
 const collection = "token";
@@ -53,7 +55,7 @@ class BotManager {
 		this.client.login(apitoken);
 	}
 
-	receive = message => {
+	receive = (message) => {
 		if (message.content.substring(0, prefix.length) != prefix) {
 			return;
 		}
@@ -62,8 +64,11 @@ class BotManager {
 			return;
 		}
 
-		let msgArr = message.content.replace(prefix, "");
-		msgArr = msgArr.split(" ");
+		let processedMsg = message.content
+			.replace(/\s\s+/g, " ")
+			.replace(prefix, "");
+
+		let msgArr = processedMsg.split(" ");
 		if (msgArr[0] === "link") {
 			this.fetchTemplate(message, msgArr, this.link);
 			return;
@@ -72,22 +77,30 @@ class BotManager {
 			this.fetchTemplate(message, msgArr, this.notification);
 			return;
 		}
+		if (msgArr[0] === "sf") {
+			this.fetchTemplate(message, msgArr, this.sketchfecta);
+			return;
+		}
+	};
+
+	errorHandling = async (error) => {
+		let errCh = await this.client.channels.fetch(errorCh);
+		errCh.send(error);
 	};
 
 	fetchTemplate = async (message, args, callback) => {
 		if (botMsgUrl) {
 			axios
 				.get(botMsgUrl)
-				.then(response => {
+				.then((response) => {
 					this.msgTemplates = xml.parse(response.data);
 					callback(message, args);
 				})
-				.catch(async error => {
-					let errCh = await this.client.channels.fetch(errorCh);
+				.catch(async (error) => {
 					if (error.response) {
-						errCh.send(error.response.data);
+						this.errorHandling(error.response);
 					} else {
-						errCh.send(error);
+						this.errorHandling(error.message);
 					}
 				});
 		} else {
@@ -109,7 +122,7 @@ class BotManager {
 				userName: user.tag,
 				token: tokenStr,
 				date: null,
-				admin: admin ? true : false
+				admin: admin ? true : false,
 			},
 			{ upsert: true },
 			(err, doc) => {
@@ -187,27 +200,142 @@ class BotManager {
 		}
 	};
 
-	sendPromptsMsg = async promptsMsg => {
-		let dateCur = moment()
-			.tz(timezone)
-			.format("MMM Do, YYYY");
+	sketchfecta = (message, args) => {
+		let channel = message.channel;
+		if (args.length < 2) {
+			channel.send(`Usage: `);
+			return;
+		}
+
+		if (args[1] == "make") {
+			this.sfMake(message, args);
+			return;
+		}
+		if (args[1] == "set") {
+			this.sfSet(message, args);
+			return;
+		}
+	};
+
+	sfSet = (message, args) => {
+		let channel = message.channel;
+		let user = message.author;
+		if (args.length > 2) {
+			let updatedObj = { userId: user.id, imageUrl: args[2] };
+			if (args.length > 3) {
+				if (!/^[0-9A-F]{6}$/i.test(args[3])) {
+					let template =
+						this.msgTemplates.sketchfecta &&
+						this.msgTemplates.sketchfecta.invalid_color
+							? this.msgTemplates.sketchfecta.invalid_color
+							: "Invalid color code. Color code should only include 6 hex values, without #. (Eg. 12AB45)";
+					channel.send(template);
+					return;
+				}
+				updatedObj.fontColor = args[3];
+			}
+
+			SFTheme.findOneAndUpdate(
+				{ userId: user.id },
+				updatedObj,
+				{ upsert: true },
+				(err, doc) => {
+					if (err) {
+						channel.send("Error: " + err);
+						return;
+					}
+
+					let template =
+						this.msgTemplates.sketchfecta &&
+						this.msgTemplates.sketchfecta.set_success
+							? this.msgTemplates.sketchfecta.set_success
+							: `Your Sketchfecta theme has been successfully set! Use \`${prefix}sf preview\` to preview your sketchfecta.`;
+					channel.send(template);
+				}
+			);
+			return;
+		}
+
+		SFTheme.findOneAndRemove({ userId: user.id }, (err, doc) => {
+			if (err) {
+				channel.send("Error: " + err);
+				return;
+			}
+
+			let template =
+				this.msgTemplates.sketchfecta &&
+				this.msgTemplates.sketchfecta.unset_success
+					? this.msgTemplates.sketchfecta.unset_success
+					: "Your Sketchfecta theme has reset to default!";
+			channel.send(template);
+		});
+	};
+
+	sfPreview = (message, args) => {};
+
+	sfMake = async (message, args) => {
+		let admin = message.member
+			? message.member.roles.cache.has(adminRoleId)
+			: false;
+		let mention = message.mentions.users.array()[0];
+		let channel = message.channel;
+		let user = message.author;
+
+		let sftheme = await SFTheme.findOne({ userId: user.id });
+
+		if (!admin) return;
+
+		let prompts = [];
+		for (let i = 2; i < 7; i++) {
+			prompts.push(args[i]);
+		}
+
+		channel.send("Generating image...");
+
+		let sfTemplate = sftheme
+			? sftheme.imageUrl
+			: __dirname + "/sketchfecta/asset/sfDefault.png";
+		let sff = new sfFactory(channel, sfTemplate, prompts);
+
+		sff.setText(mention.tag, args[8], args[9]);
+		sff.fontColor = sftheme ? `#${sftheme.fontColor}` : "black";
+
+		sff.draw(this.sfMakeCallback).catch((error) => {
+			let template =
+				this.msgTemplates.sketchfecta &&
+				this.msgTemplates.sketchfecta.makeInvalid
+					? this.msgTemplates.sketchfecta.makeInvalid
+					: `An error occurred. Ensure that the command is correctly issued. (${prefix}sf prompt1...prompt5, name, count, [date])`;
+			channel.send(template);
+
+			this.errorHandling(`${error.name}: ${error.message}`);
+		});
+	};
+
+	sfMakeCallback = (channel, buffer) => {
+		const attachment = new MessageAttachment(buffer, "sketchfecta.png");
+		channel.send("", attachment);
+	};
+
+	sendPromptsMsg = async (promptsMsg) => {
+		let dateCur = moment().tz(timezone).format("MMM Do, YYYY");
 
 		let dateMsg = `**>\n>\n>\n${dateCur}**\n\n`;
 
 		let archCh = await this.client.channels.fetch(archiveChId);
 		archCh.send(`${dateMsg}${promptsMsg}`);
 
-		promptChId.forEach(async chId => {
+		promptChId.forEach(async (chId) => {
 			let pmtCh = await this.client.channels.fetch(chId);
 			pmtCh.send(dateMsg);
 		});
 	};
 
-	sendPrompts = prompts => {
+	sendPrompts = (prompts) => {
 		let promptsMsg = "";
 
 		let count = 1;
-		prompts.forEach(prompt => {
+		prompts.forEach((prompt) => {
 			promptsMsg += `**Prompt ${count} (Submitted by ${
 				prompt.anonymous ? "Anonymous" : "<@" + prompt.userId + ">"
 			}):** ${prompt.prompt} [${prompt.duration}] \n`;
