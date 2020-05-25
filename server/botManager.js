@@ -211,6 +211,12 @@ class BotManager {
 			this.sfMake(message, args);
 			return;
 		}
+
+		if (args[1] == "preview") {
+			this.sfPreview(message, args);
+			return;
+		}
+
 		if (args[1] == "set") {
 			this.sfSet(message, args);
 			return;
@@ -271,7 +277,39 @@ class BotManager {
 		});
 	};
 
-	sfPreview = (message, args) => {};
+	sfPreview = async (message, args) => {
+		let channel = message.channel;
+		let user = message.author;
+		let sftheme = await SFTheme.findOne({ userId: user.id });
+
+		channel.send("Generating image...");
+
+		let prompts = [
+			__dirname + "/sketchfecta/asset/sample/sample1.jpg",
+			__dirname + "/sketchfecta/asset/sample/sample2.jpg",
+			__dirname + "/sketchfecta/asset/sample/sample3.jpg",
+			__dirname + "/sketchfecta/asset/sample/sample4.jpg",
+			__dirname + "/sketchfecta/asset/sample/sample5.jpg",
+		];
+		let sfTemplate = sftheme
+			? sftheme.imageUrl
+			: __dirname + "/sketchfecta/asset/sfDefault.png";
+		let sff = new sfFactory(channel, sfTemplate, prompts);
+
+		sff.setText(user.tag, "Xth", "");
+		sff.fontColor = sftheme ? `#${sftheme.fontColor}` : "black";
+
+		sff.draw(this.sfMakeCallback).catch((error) => {
+			let template =
+				this.msgTemplates.sketchfecta &&
+				this.msgTemplates.sketchfecta.preview_invalid
+					? this.msgTemplates.sketchfecta.preview_invalid
+					: `An error occurred. Ensure that image URL provided are working properly.`;
+			channel.send(template);
+
+			this.errorHandling(`${error.name}: ${error.message}`);
+		});
+	};
 
 	sfMake = async (message, args) => {
 		let admin = message.member
@@ -281,7 +319,7 @@ class BotManager {
 		let channel = message.channel;
 		let user = message.author;
 
-		let sftheme = await SFTheme.findOne({ userId: user.id });
+		let sftheme = await SFTheme.findOne({ userId: mention.id });
 
 		if (!admin) return;
 
@@ -303,8 +341,8 @@ class BotManager {
 		sff.draw(this.sfMakeCallback).catch((error) => {
 			let template =
 				this.msgTemplates.sketchfecta &&
-				this.msgTemplates.sketchfecta.makeInvalid
-					? this.msgTemplates.sketchfecta.makeInvalid
+				this.msgTemplates.sketchfecta.make_invalid
+					? this.msgTemplates.sketchfecta.make_invalid
 					: `An error occurred. Ensure that the command is correctly issued. (${prefix}sf prompt1...prompt5, name, count, [date])`;
 			channel.send(template);
 
