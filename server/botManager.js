@@ -223,10 +223,31 @@ class BotManager {
 		}
 	};
 
-	sfSet = (message, args) => {
+	sfSet = async (message, args) => {
 		let channel = message.channel;
 		let user = message.author;
 		if (args.length > 2) {
+			try {
+				let image = await sfFactory.checkImage(args[2]);
+				if (!image) {
+					let template =
+						this.msgTemplates.sketchfecta &&
+						this.msgTemplates.sketchfecta.invalid_url
+							? this.msgTemplates.sketchfecta.invalid_url
+							: "Invalid URL provided. Please ensure that URL is an image and try again.";
+					channel.send(template);
+					return;
+				}
+			} catch (error) {
+				let template =
+					this.msgTemplates.sketchfecta &&
+					this.msgTemplates.sketchfecta.invalid_url
+						? this.msgTemplates.sketchfecta.invalid_url
+						: "Invalid URL provided. Please ensure that URL is an image and try again.";
+				channel.send(template);
+				return;
+			}
+
 			let updatedObj = { userId: user.id, imageUrl: args[2] };
 			if (args.length > 3) {
 				if (!/^[0-9A-F]{6}$/i.test(args[3])) {
@@ -343,7 +364,7 @@ class BotManager {
 				this.msgTemplates.sketchfecta &&
 				this.msgTemplates.sketchfecta.make_invalid
 					? this.msgTemplates.sketchfecta.make_invalid
-					: `An error occurred. Ensure that the command is correctly issued. (${prefix}sf prompt1...prompt5, name, count, [date])`;
+					: `An error occurred. Ensure that the command is correctly issued (${prefix}sf prompt1...prompt5, name, count, [date]) and URLs provided are valid.`;
 			channel.send(template);
 
 			this.errorHandling(`${error.name}: ${error.message}`);

@@ -55,6 +55,21 @@ export default class sfFactory {
 		this.date = moment().tz(TIMEZONE).format("MM-DD-yyyy");
 	};
 
+	static checkImage = async (url) => {
+		if (
+			!(
+				url.substring(0, 7) == "http://" ||
+				url.substring(0, 8) == "https://"
+			)
+		)
+			return false;
+
+		let image = await loadImage(url);
+
+		if (image) return true;
+		return false;
+	};
+
 	draw = async (callback) => {
 		let promises = [];
 
