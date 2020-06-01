@@ -32,6 +32,7 @@ export default class sfFactory {
 	context;
 	baseUrl;
 	fontColor = "black";
+	bgColor = "white";
 	promptsUrl = [];
 	name = "";
 	counter = "";
@@ -80,7 +81,7 @@ export default class sfFactory {
 
 		let images = await Promise.all(promises);
 
-		this.context.fillStyle = "white";
+		this.context.fillStyle = this.bgColor;
 		this.context.fillRect(0, 0, WIDTH, HEIGHT);
 
 		for (let i = 0; i < images.length; i++) {

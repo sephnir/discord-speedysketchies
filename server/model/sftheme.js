@@ -7,6 +7,7 @@ const SFTheme = new Schema(
 		userId: { type: String, index: true },
 		imageUrl: { type: String },
 		fontColor: { type: String },
+		bgColor: { type: String },
 	},
 	{ timestamps: {} }
 );
