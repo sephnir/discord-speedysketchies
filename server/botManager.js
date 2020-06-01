@@ -65,6 +65,7 @@ class BotManager {
 		}
 
 		let processedMsg = message.content
+			.replace(/\n+/g, " ")
 			.replace(/\s\s+/g, " ")
 			.replace(prefix, "");
 
@@ -230,13 +231,7 @@ class BotManager {
 			try {
 				let image = await sfFactory.checkImage(args[2]);
 				if (!image) {
-					let template =
-						this.msgTemplates.sketchfecta &&
-						this.msgTemplates.sketchfecta.invalid_url
-							? this.msgTemplates.sketchfecta.invalid_url
-							: "Invalid URL provided. Please ensure that URL is an image and try again.";
-					channel.send(template);
-					return;
+					throw "No image received";
 				}
 			} catch (error) {
 				let template =
@@ -248,18 +243,26 @@ class BotManager {
 				return;
 			}
 
+			let check = true;
 			let updatedObj = { userId: user.id, imageUrl: args[2] };
 			if (args.length > 3) {
-				if (!/^[0-9A-F]{6}$/i.test(args[3])) {
-					let template =
-						this.msgTemplates.sketchfecta &&
-						this.msgTemplates.sketchfecta.invalid_color
-							? this.msgTemplates.sketchfecta.invalid_color
-							: "Invalid color code. Color code should only include 6 hex values, without #. (Eg. 12AB45)";
-					channel.send(template);
-					return;
-				}
+				if (!/^[0-9A-F]{6}$/i.test(args[3])) check = false;
 				updatedObj.fontColor = args[3];
+
+				if (args.length > 4) {
+					if (!/^[0-9A-F]{6}$/i.test(args[4])) check = false;
+					updatedObj.bgColor = args[4];
+				}
+			}
+
+			if (!check) {
+				let template =
+					this.msgTemplates.sketchfecta &&
+					this.msgTemplates.sketchfecta.invalid_color
+						? this.msgTemplates.sketchfecta.invalid_color
+						: "Invalid color code. Color code should only include 6 hex values, without #. (Eg. 12AB45)";
+				channel.send(template);
+				return;
 			}
 
 			SFTheme.findOneAndUpdate(
@@ -306,19 +309,21 @@ class BotManager {
 		channel.send("Generating image...");
 
 		let prompts = [
-			__dirname + "/sketchfecta/asset/sample/sample1.jpg",
-			__dirname + "/sketchfecta/asset/sample/sample2.jpg",
-			__dirname + "/sketchfecta/asset/sample/sample3.jpg",
-			__dirname + "/sketchfecta/asset/sample/sample4.jpg",
-			__dirname + "/sketchfecta/asset/sample/sample5.jpg",
+			__dirname + "/sketchfecta/asset/sample/sample1.png",
+			__dirname + "/sketchfecta/asset/sample/sample2.png",
+			__dirname + "/sketchfecta/asset/sample/sample3.png",
+			__dirname + "/sketchfecta/asset/sample/sample4.png",
+			__dirname + "/sketchfecta/asset/sample/sample5.png",
 		];
-		let sfTemplate = sftheme
-			? sftheme.imageUrl
-			: __dirname + "/sketchfecta/asset/sfDefault.png";
-		let sff = new sfFactory(channel, sfTemplate, prompts);
 
-		sff.setText(user.tag, "Xth", "");
-		sff.fontColor = sftheme ? `#${sftheme.fontColor}` : "black";
+		let sff = this.initSFTheme(
+			channel,
+			sftheme,
+			prompts,
+			user.tag + "'s",
+			"Xth",
+			""
+		);
 
 		sff.draw(this.sfMakeCallback).catch((error) => {
 			let template =
@@ -351,13 +356,14 @@ class BotManager {
 
 		channel.send("Generating image...");
 
-		let sfTemplate = sftheme
-			? sftheme.imageUrl
-			: __dirname + "/sketchfecta/asset/sfDefault.png";
-		let sff = new sfFactory(channel, sfTemplate, prompts);
-
-		sff.setText(mention.tag, args[8], args[9]);
-		sff.fontColor = sftheme ? `#${sftheme.fontColor}` : "black";
+		let sff = this.initSFTheme(
+			channel,
+			sftheme,
+			prompts,
+			mention.tag + "'s",
+			args[8],
+			args[9]
+		);
 
 		sff.draw(this.sfMakeCallback).catch((error) => {
 			let template =
@@ -369,6 +375,21 @@ class BotManager {
 
 			this.errorHandling(`${error.name}: ${error.message}`);
 		});
+	};
+
+	initSFTheme = (channel, sftheme, prompts, tag, count, date) => {
+		let sfTemplate = __dirname + "/sketchfecta/asset/sfDefault.png";
+		let sff = new sfFactory(channel, sfTemplate, prompts);
+
+		if (sftheme) {
+			if (sftheme.imageUrl) sff.baseUrl = sftheme.imageUrl;
+			if (sftheme.fontColor) sff.fontColor = "#" + sftheme.fontColor;
+			if (sftheme.bgColor) sff.bgColor = "#" + sftheme.bgColor;
+		}
+
+		sff.setText(tag, count, date);
+
+		return sff;
 	};
 
 	sfMakeCallback = (channel, buffer) => {
