@@ -321,7 +321,7 @@ class BotManager {
 			sftheme,
 			prompts,
 			user.tag + "'s",
-			"Xth",
+			"XXth",
 			""
 		);
 
