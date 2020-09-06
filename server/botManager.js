@@ -86,7 +86,7 @@ class BotManager {
 
 	errorHandling = async (error) => {
 		let errCh = await this.client.channels.fetch(errorCh);
-		errCh.send(error);
+		errCh.send("Error - " + error);
 	};
 
 	fetchTemplate = async (message, args, callback) => {
@@ -164,20 +164,28 @@ class BotManager {
 		}
 
 		let check = false;
-		for (let i = 0; i < notifyCommandArr.length; i++) {
-			if (args[1] === notifyCommandArr[i]) {
-				let promiseList = [];
-				for (let j = 0; j < notifyIDArr.length; j++) {
-					if (member.roles.cache.has(notifyIDArr[j]))
-						promiseList.push(member.roles.remove(notifyIDArr[j]));
+
+		try {
+			for (let i = 0; i < notifyCommandArr.length; i++) {
+				if (args[1] === notifyCommandArr[i]) {
+					let promiseList = [];
+					for (let j = 0; j < notifyIDArr.length; j++) {
+						if (member.roles.cache.has(notifyIDArr[j]))
+							promiseList.push(
+								await member.roles.remove(notifyIDArr[j])
+							);
+					}
+
+					await Promise.all(promiseList);
+
+					await member.roles.add(notifyIDArr[i]);
+					check = true;
+					break;
 				}
-
-				await Promise.all(promiseList);
-
-				member.roles.add(notifyIDArr[i]);
-				check = true;
-				break;
 			}
+		} catch (error) {
+			this.errorHandling(`${error.name}: ${error.message}`);
+			return;
 		}
 
 		if (check) {
@@ -288,7 +296,7 @@ class BotManager {
 
 		SFTheme.findOneAndRemove({ userId: user.id }, (err, doc) => {
 			if (err) {
-				channel.send("Error: " + err);
+				channel.send("Error - " + err);
 				return;
 			}
 
