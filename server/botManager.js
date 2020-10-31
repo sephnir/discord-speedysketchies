@@ -5,26 +5,36 @@ import moment from "moment";
 import "moment-timezone";
 import routes from "./routes.json";
 import crypto from "crypto";
-import { Client } from "discord.js";
+import { Client, MessageAttachment } from "discord.js";
 import axios from "axios";
 import xml from "fast-xml-parser";
+import sfFactory from "./sketchfecta/sfFactory";
 
 import mongoose from "mongoose";
 const Token = mongoose.model("Token");
+const SFTheme = mongoose.model("SFTheme");
 
 const prefix = process.env.PREFIX;
 const apitoken = process.env.BOT_APITOKEN;
-const adminRole = process.env.DISCORD_ADMIN_ROLEID;
+
+const adminRoleId = process.env.DISCORD_ADMIN_ROLEID;
+const memberRoleId = process.env.DISCORD_MEMBER_ROLEID;
+
+const notifyRoleCommands = process.env.DISCORD_NOTIFY_ROLECMDS;
+const notifyRoleIds = process.env.DISCORD_NOTIFY_ROLEIDS;
+
 const host = process.env.HOST_URL;
 const botMsgUrl = process.env.BOT_MESSAGE_URL;
 const archiveChId = process.env.CH_ARCHIVE;
+const errorCh = process.env.CH_ERROR;
 const timezone = process.env.TIMEZONE;
+
 const promptChId = [
 	process.env.CH_PROMPT1,
 	process.env.CH_PROMPT2,
 	process.env.CH_PROMPT3,
 	process.env.CH_PROMPT4,
-	process.env.CH_PROMPT5
+	process.env.CH_PROMPT5,
 ];
 
 const collection = "token";
@@ -45,7 +55,7 @@ class BotManager {
 		this.client.login(apitoken);
 	}
 
-	receive = message => {
+	receive = (message) => {
 		if (message.content.substring(0, prefix.length) != prefix) {
 			return;
 		}
@@ -54,36 +64,56 @@ class BotManager {
 			return;
 		}
 
-		let msgArr = message.content.replace(prefix, "");
-		msgArr = msgArr.split(" ");
+		let processedMsg = message.content
+			.replace(/\n+/g, " ")
+			.replace(/\s\s+/g, " ")
+			.replace(prefix, "");
+
+		let msgArr = processedMsg.split(" ");
 		if (msgArr[0] === "link") {
-			this.fetchTemplate(message, this.link);
+			this.fetchTemplate(message, msgArr, this.link);
+			return;
+		}
+		if (msgArr[0] === "notification") {
+			this.fetchTemplate(message, msgArr, this.notification);
+			return;
+		}
+		if (msgArr[0] === "sf") {
+			this.fetchTemplate(message, msgArr, this.sketchfecta);
+			return;
 		}
 	};
 
-	fetchTemplate = async (message, callback) => {
+	errorHandling = async (error) => {
+		let errCh = await this.client.channels.fetch(errorCh);
+		errCh.send(error);
+	};
+
+	fetchTemplate = async (message, args, callback) => {
 		if (botMsgUrl) {
 			axios
 				.get(botMsgUrl)
-				.then(response => {
+				.then((response) => {
 					this.msgTemplates = xml.parse(response.data);
-					callback(message);
+					callback(message, args);
 				})
-				.catch(error => {
+				.catch(async (error) => {
 					if (error.response) {
-						console.log(error.response.data);
+						this.errorHandling(error.response);
+					} else {
+						this.errorHandling(error.message);
 					}
 				});
 		} else {
-			callback(message);
+			callback(message, args);
 		}
 	};
 
-	link = message => {
+	link = (message, args) => {
 		let tokenStr = crypto.randomBytes(6).toString("hex");
 		let user = message.author;
 		let admin = message.member
-			? message.member.roles.cache.has(adminRole)
+			? message.member.roles.cache.has(adminRoleId)
 			: false;
 
 		Token.findOneAndUpdate(
@@ -93,7 +123,7 @@ class BotManager {
 				userName: user.tag,
 				token: tokenStr,
 				date: null,
-				admin: admin ? true : false
+				admin: admin ? true : false,
 			},
 			{ upsert: true },
 			(err, doc) => {
@@ -120,27 +150,272 @@ class BotManager {
 		);
 	};
 
-	sendPromptsMsg = async promptsMsg => {
-		let dateCur = moment()
-			.tz(timezone)
-			.format("MMM Do, YYYY");
+	notification = async (message, args) => {
+		let notifyCommandArr = notifyRoleCommands.split(",");
+		let notifyIDArr = notifyRoleIds.split(",");
+		let channel = message.channel;
+		let member = message.member;
+
+		if (!member) return;
+
+		if (!member.roles.cache.has(memberRoleId)) {
+			//roles.push(memberRoleId);
+			await member.roles.add(memberRoleId);
+		}
+
+		let check = false;
+		for (let i = 0; i < notifyCommandArr.length; i++) {
+			if (args[1] === notifyCommandArr[i]) {
+				let promiseList = [];
+				for (let j = 0; j < notifyIDArr.length; j++) {
+					if (member.roles.cache.has(notifyIDArr[j]))
+						promiseList.push(member.roles.remove(notifyIDArr[j]));
+				}
+
+				await Promise.all(promiseList);
+
+				member.roles.add(notifyIDArr[i]);
+				check = true;
+				break;
+			}
+		}
+
+		if (check) {
+			let template =
+				this.msgTemplates.notification &&
+				this.msgTemplates.notification.success
+					? this.msgTemplates.notification.success
+					: "Role has been successfully set!";
+			channel.send(template);
+		} else {
+			let template =
+				this.msgTemplates.notification &&
+				this.msgTemplates.notification.wrong_command
+					? this.msgTemplates.notification.wrong_command
+					: "You need to specify a valid role for 'notification'.";
+			let commandList = `\nUsage: \`${prefix}notification ${notifyCommandArr.join(
+				"|"
+			)}\``;
+
+			channel.send(`${template}${commandList}`);
+		}
+	};
+
+	sketchfecta = (message, args) => {
+		let channel = message.channel;
+		if (args.length < 2) {
+			channel.send(`Usage: `);
+			return;
+		}
+
+		if (args[1] == "make") {
+			this.sfMake(message, args);
+			return;
+		}
+
+		if (args[1] == "preview") {
+			this.sfPreview(message, args);
+			return;
+		}
+
+		if (args[1] == "set") {
+			this.sfSet(message, args);
+			return;
+		}
+	};
+
+	sfSet = async (message, args) => {
+		let channel = message.channel;
+		let user = message.author;
+		if (args.length > 2) {
+			try {
+				let image = await sfFactory.checkImage(args[2]);
+				if (!image) {
+					throw "No image received";
+				}
+			} catch (error) {
+				let template =
+					this.msgTemplates.sketchfecta &&
+					this.msgTemplates.sketchfecta.invalid_url
+						? this.msgTemplates.sketchfecta.invalid_url
+						: "Invalid URL provided. Please ensure that URL is an image and try again.";
+				channel.send(template);
+				return;
+			}
+
+			let check = true;
+			let updatedObj = { userId: user.id, imageUrl: args[2] };
+			if (args.length > 3) {
+				if (!/^[0-9A-F]{6}$/i.test(args[3])) check = false;
+				updatedObj.fontColor = args[3];
+
+				if (args.length > 4) {
+					if (!/^[0-9A-F]{6}$/i.test(args[4])) check = false;
+					updatedObj.bgColor = args[4];
+				}
+			}
+
+			if (!check) {
+				let template =
+					this.msgTemplates.sketchfecta &&
+					this.msgTemplates.sketchfecta.invalid_color
+						? this.msgTemplates.sketchfecta.invalid_color
+						: "Invalid color code. Color code should only include 6 hex values, without #. (Eg. 12AB45)";
+				channel.send(template);
+				return;
+			}
+
+			SFTheme.findOneAndUpdate(
+				{ userId: user.id },
+				updatedObj,
+				{ upsert: true },
+				(err, doc) => {
+					if (err) {
+						channel.send("Error: " + err);
+						return;
+					}
+
+					let template =
+						this.msgTemplates.sketchfecta &&
+						this.msgTemplates.sketchfecta.set_success
+							? this.msgTemplates.sketchfecta.set_success
+							: `Your Sketchfecta theme has been successfully set! Use \`${prefix}sf preview\` to preview your sketchfecta.`;
+					channel.send(template);
+				}
+			);
+			return;
+		}
+
+		SFTheme.findOneAndRemove({ userId: user.id }, (err, doc) => {
+			if (err) {
+				channel.send("Error: " + err);
+				return;
+			}
+
+			let template =
+				this.msgTemplates.sketchfecta &&
+				this.msgTemplates.sketchfecta.unset_success
+					? this.msgTemplates.sketchfecta.unset_success
+					: "Your Sketchfecta theme has reset to default!";
+			channel.send(template);
+		});
+	};
+
+	sfPreview = async (message, args) => {
+		let channel = message.channel;
+		let user = message.author;
+		let sftheme = await SFTheme.findOne({ userId: user.id });
+
+		channel.send("Generating image...");
+
+		let prompts = [
+			__dirname + "/sketchfecta/asset/sample/sample1.png",
+			__dirname + "/sketchfecta/asset/sample/sample2.png",
+			__dirname + "/sketchfecta/asset/sample/sample3.png",
+			__dirname + "/sketchfecta/asset/sample/sample4.png",
+			__dirname + "/sketchfecta/asset/sample/sample5.png",
+		];
+
+		let sff = this.initSFTheme(
+			channel,
+			sftheme,
+			prompts,
+			user.tag + "'s",
+			"XXth",
+			""
+		);
+
+		sff.draw(this.sfMakeCallback).catch((error) => {
+			let template =
+				this.msgTemplates.sketchfecta &&
+				this.msgTemplates.sketchfecta.preview_invalid
+					? this.msgTemplates.sketchfecta.preview_invalid
+					: `An error occurred. Ensure that image URL provided are working properly.`;
+			channel.send(template);
+
+			this.errorHandling(`${error.name}: ${error.message}`);
+		});
+	};
+
+	sfMake = async (message, args) => {
+		let admin = message.member
+			? message.member.roles.cache.has(adminRoleId)
+			: false;
+		let mention = message.mentions.users.array()[0];
+		let channel = message.channel;
+		let user = message.author;
+
+		let sftheme = await SFTheme.findOne({ userId: mention.id });
+
+		if (!admin) return;
+
+		let prompts = [];
+		for (let i = 2; i < 7; i++) {
+			prompts.push(args[i]);
+		}
+
+		channel.send("Generating image...");
+
+		let sff = this.initSFTheme(
+			channel,
+			sftheme,
+			prompts,
+			mention.tag + "'s",
+			args[8],
+			args[9]
+		);
+
+		sff.draw(this.sfMakeCallback).catch((error) => {
+			let template =
+				this.msgTemplates.sketchfecta &&
+				this.msgTemplates.sketchfecta.make_invalid
+					? this.msgTemplates.sketchfecta.make_invalid
+					: `An error occurred. Ensure that the command is correctly issued (${prefix}sf prompt1...prompt5, name, count, [date]) and URLs provided are valid.`;
+			channel.send(template);
+
+			this.errorHandling(`${error.name}: ${error.message}`);
+		});
+	};
+
+	initSFTheme = (channel, sftheme, prompts, tag, count, date) => {
+		let sfTemplate = __dirname + "/sketchfecta/asset/sfDefault.png";
+		let sff = new sfFactory(channel, sfTemplate, prompts);
+
+		if (sftheme) {
+			if (sftheme.imageUrl) sff.baseUrl = sftheme.imageUrl;
+			if (sftheme.fontColor) sff.fontColor = "#" + sftheme.fontColor;
+			if (sftheme.bgColor) sff.bgColor = "#" + sftheme.bgColor;
+		}
+
+		sff.setText(tag, count, date);
+
+		return sff;
+	};
+
+	sfMakeCallback = (channel, buffer) => {
+		const attachment = new MessageAttachment(buffer, "sketchfecta.png");
+		channel.send("", attachment);
+	};
+
+	sendPromptsMsg = async (promptsMsg) => {
+		let dateCur = moment().tz(timezone).format("MMM Do, YYYY");
 
 		let dateMsg = `**>\n>\n>\n${dateCur}**\n\n`;
 
 		let archCh = await this.client.channels.fetch(archiveChId);
 		archCh.send(`${dateMsg}${promptsMsg}`);
 
-		promptChId.forEach(async chId => {
+		promptChId.forEach(async (chId) => {
 			let pmtCh = await this.client.channels.fetch(chId);
 			pmtCh.send(dateMsg);
 		});
 	};
 
-	sendPrompts = prompts => {
+	sendPrompts = (prompts) => {
 		let promptsMsg = "";
 
 		let count = 1;
-		prompts.forEach(prompt => {
+		prompts.forEach((prompt) => {
 			promptsMsg += `**Prompt ${count} (Submitted by ${
 				prompt.anonymous ? "Anonymous" : "<@" + prompt.userId + ">"
 			}):** ${prompt.prompt} [${prompt.duration}] \n`;

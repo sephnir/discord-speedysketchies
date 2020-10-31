@@ -8,6 +8,7 @@ const Prompt = mongoose.model("Prompt");
 import express, { static as serveStatic } from "express";
 import bodyParser from "body-parser";
 import helmet from "helmet";
+import axios from "axios";
 import http from "http";
 
 import routes from "./routes.json";
@@ -16,10 +17,11 @@ import routes from "./routes.json";
 const jsonParser = bodyParser.json();
 // create application/x-www-form-urlencoded parser
 const urlencodedParser = bodyParser.urlencoded({
-	extended: false
+	extended: false,
 });
 
 const port = process.env.PORT || 8000;
+const hpUrl = process.env.HOMEPAGE_URL;
 
 class EpManager {
 	constructor(botManager) {
@@ -42,21 +44,40 @@ class EpManager {
 	}
 
 	webRoutes = () => {
+		this.app.get(`/`, (req, res) => {
+			this.fetchHomepage(res);
+		});
+
 		this.app.get(`/${routes.web.promptForm}/*`, (req, res) => {
 			return res.sendFile(`${routes.web.promptForm}/index.html`, {
-				root: `${__dirname}/../public`
+				root: `${__dirname}/../public`,
 			});
 		});
 
 		this.app.get(`/${routes.web.managePrompts}/*`, (req, res) => {
 			return res.sendFile(`${routes.web.managePrompts}/index.html`, {
-				root: `${__dirname}/../public`
+				root: `${__dirname}/../public`,
 			});
 		});
 
 		this.app.get("*", (req, res) => {
 			return res.sendStatus(404);
 		});
+	};
+
+	fetchHomepage = (res) => {
+		if (hpUrl) {
+			axios
+				.get(hpUrl)
+				.then((response) => {
+					res.send(response.data);
+				})
+				.catch(async (error) => {
+					console.log("Error fetching homepage");
+				});
+		} else {
+			res.send("Hello world");
+		}
 	};
 
 	apiRoutes = () => {
@@ -162,7 +183,7 @@ class EpManager {
 			userName: result.userName,
 			prompt: req.body.prompt,
 			duration: req.body.duration,
-			anonymous: req.body.anon
+			anonymous: req.body.anon,
 		});
 
 		await prompt.save();
